@@ -16,6 +16,6 @@ public interface RsEventRepository extends CrudRepository<RsEventDto, Integer> {
   Optional<RsEventDto> findByTradeRank(int rank);
 
   void deleteByTradeRank(int TradeRank);
-
+  @Transactional
   Optional<RsEventDto> findById(int id);
 }

@@ -55,6 +55,7 @@ public class RsService{
                           .keyword(rsEventDto.getKeyword())
                           .userId(rsEventDto.getUser().getId())
                           .voteNum(rsEventDto.getVoteNum())
+                          .tradeRank(rsEventDto.getTradeRank())
                           .build()
           )
           .collect(Collectors.toList());
@@ -97,6 +98,7 @@ public class RsService{
       TradeDto tradeDtoToSave = TradeDto.builder().amount(trade.getAmount())
               .rank(trade.getRank()).build();
       tradeDto.ifPresent(dto -> rsEventRepository.deleteByTradeRank(dto.getRank()));
+      tradeDto.ifPresent(dto -> tradeRepository.deleteByRank(dto.getRank()));
 
       Optional<RsEventDto> rsEventDtoTraded = rsEventRepository.findById(id);
       if(rsEventDtoTraded.isPresent()) {

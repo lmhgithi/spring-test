@@ -122,17 +122,17 @@ class RsServiceTest {
   @Test
   void shouldUpdateRankOfRsEventAndDeleteOldRsEventWhenAmountIsEnough(){
     Trade tradeToBuy = Trade.builder().amount(15).rank(1).build();
-    TradeDto tradeDtoToBuy = TradeDto.builder().amount(15).rank(1).build();
     TradeDto tradeDtoExists = TradeDto.builder().amount(10).rank(1).build();
     RsEventDto rsEventDtoExists = RsEventDto.builder().eventName("1").keyword("1").tradeRank(1).build();
     RsEventDto rsEventDtoToTrade = RsEventDto.builder().eventName("2").keyword("2").build();
     RsEventDto rsEventDtoTraded = RsEventDto.builder().eventName("2").keyword("2").tradeRank(1).build();
+
     when(tradeRepository.findByRank(tradeToBuy.getRank())).thenReturn(Optional.of(tradeDtoExists));
     when(rsEventRepository.findByTradeRank(1)).thenReturn(Optional.of(rsEventDtoExists));
     when(rsEventRepository.findById(rsEventDtoToTrade.getId())).thenReturn(Optional.of(rsEventDtoToTrade));
 
     rsService.buy(tradeToBuy, rsEventDtoToTrade.getId());
-
+    verify(tradeRepository).deleteByRank(1);
     verify(rsEventRepository).deleteByTradeRank(rsEventDtoExists.getTradeRank());
     verify(rsEventRepository).save(rsEventDtoTraded);
   }

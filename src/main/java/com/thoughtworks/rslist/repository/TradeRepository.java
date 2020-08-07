@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface TradeRepository extends CrudRepository<TradeDto, Integer> {
     List<TradeDto> findAll();
     Optional<TradeDto> findByRank(int rank);
+    void deleteByRank(int rank);
 }

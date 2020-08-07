@@ -1,9 +1,13 @@
 package com.thoughtworks.rslist.api;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.thoughtworks.rslist.domain.Trade;
 import com.thoughtworks.rslist.dto.RsEventDto;
+import com.thoughtworks.rslist.dto.TradeDto;
 import com.thoughtworks.rslist.dto.UserDto;
 import com.thoughtworks.rslist.dto.VoteDto;
 import com.thoughtworks.rslist.repository.RsEventRepository;
+import com.thoughtworks.rslist.repository.TradeRepository;
 import com.thoughtworks.rslist.repository.UserRepository;
 import com.thoughtworks.rslist.repository.VoteRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,10 +16,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
@@ -23,6 +30,9 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -35,13 +45,15 @@ class RsControllerTest {
   @Autowired UserRepository userRepository;
   @Autowired RsEventRepository rsEventRepository;
   @Autowired VoteRepository voteRepository;
+  @Autowired TradeRepository tradeRepository;
   private UserDto userDto;
-
+  ObjectMapper objectMapper = new ObjectMapper();
   @BeforeEach
   void setUp() {
     voteRepository.deleteAll();
     rsEventRepository.deleteAll();
     userRepository.deleteAll();
+    tradeRepository.deleteAll();
     userDto =
         UserDto.builder()
             .voteNum(10)
@@ -78,6 +90,71 @@ class RsControllerTest {
             .andExpect(jsonPath("$[4].eventName", is("二")))
             .andExpect(jsonPath("$[5].eventName", is("三")))
             .andExpect(status().isOk());
+  }
+
+  @Test
+  void shouldAddTradeWhenRankIsNotTraded() throws Exception {
+    // given
+    UserDto save = userRepository.save(userDto);
+    RsEventDto rsEventDto = RsEventDto.builder().keyword("无").eventName("一").voteNum(32).user(save).build();
+    rsEventRepository.save(rsEventDto);
+    Trade trade = Trade.builder().amount(1).rank(1).build();
+    String jsonRequest = objectMapper.writeValueAsString(trade);
+    int idToBuy = rsEventRepository.findAll().get(0).getId();
+
+    // when
+    mockMvc.perform(post("/rs/buy/" + idToBuy).content(jsonRequest).contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk());
+    // then
+    assertEquals(1, tradeRepository.findAll().size());
+  }
+
+  @Test
+  void shouldAddTradeWhenRankIsTradedAndAmountIsEnough() throws Exception {
+    // given
+    UserDto save = userRepository.save(userDto);
+    RsEventDto rsEventDto = RsEventDto.builder().keyword("无").eventName("一").voteNum(32).user(save).build();
+    rsEventRepository.save(rsEventDto);
+    TradeDto tradeDtoExists = TradeDto.builder().amount(10).rank(1).build();
+    tradeRepository.save(tradeDtoExists);
+    int idToBuy = rsEventRepository.findAll().get(0).getId();
+
+    Trade trade = Trade.builder().amount(15).rank(1).build();
+    String jsonRequest = objectMapper.writeValueAsString(trade);
+
+    // when
+    mockMvc.perform(post("/rs/buy/"+idToBuy).content(jsonRequest).contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk());
+    // then
+    assertEquals(1, tradeRepository.findAll().size());
+  }
+
+  @Test
+  void shouldUpdateRankOfRsEventAndDeleteOldRsEventWhenAmountIsEnough() throws Exception {
+    // given
+    UserDto save = userRepository.save(userDto);
+    RsEventDto rsEventDtoExists = RsEventDto.builder().eventName("已有的热搜").keyword("1").tradeRank(1).user(save).build();
+    RsEventDto rsEventDtoToTrade = RsEventDto.builder().eventName("购买的热搜").keyword("2").user(save).build();
+    TradeDto tradeDtoExists = TradeDto.builder().amount(10).rank(1).build();
+    rsEventRepository.save(rsEventDtoToTrade);
+    int idToTrade = rsEventRepository.findAll().get(0).getId();
+    rsEventRepository.save(rsEventDtoExists);
+    tradeRepository.save(tradeDtoExists);
+
+    Trade trade = Trade.builder().amount(15).rank(1).build();
+    String jsonRequest = objectMapper.writeValueAsString(trade);
+
+    // when
+    mockMvc.perform(post("/rs/buy/"+idToTrade).content(jsonRequest).contentType(MediaType.APPLICATION_JSON))
+            .andExpect(status().isOk());
+
+    // then
+    mockMvc.perform(get("/rs/list"))
+            .andExpect(jsonPath("$", hasSize(1)))
+            .andExpect(jsonPath("$[0].eventName", is("购买的热搜")))
+            .andExpect(jsonPath("$[0].tradeRank", is(1)))
+            .andExpect(status().isOk());
+    assertEquals(1, tradeRepository.findAll().size());
   }
 
   @Test
