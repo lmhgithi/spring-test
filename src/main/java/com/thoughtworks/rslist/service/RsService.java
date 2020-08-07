@@ -1,5 +1,6 @@
 package com.thoughtworks.rslist.service;
 
+import com.thoughtworks.rslist.domain.RsEvent;
 import com.thoughtworks.rslist.domain.Trade;
 import com.thoughtworks.rslist.domain.Vote;
 import com.thoughtworks.rslist.dto.RsEventDto;
@@ -14,10 +15,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
-public class RsService {
+public class RsService{
   final RsEventRepository rsEventRepository;
   final UserRepository userRepository;
   final VoteRepository voteRepository;
@@ -28,6 +30,38 @@ public class RsService {
     this.userRepository = userRepository;
     this.voteRepository = voteRepository;
     this.tradeRepository = tradeRepository;
+  }
+
+
+  public ResponseEntity<List<RsEvent>> getListByOrder(Integer start, Integer end){
+
+    List<RsEventDto> rsEventDtoList = rsEventRepository.findAll();
+    Collections.sort(rsEventDtoList);
+      for (int i = rsEventDtoList.size()-1; i >= 0; i--) {
+          int p = rsEventDtoList.get(i).getTradeRank();
+          if(p != Integer.MAX_VALUE && p > i+1){
+              int j = i+0;
+              while(rsEventDtoList.get(j).getTradeRank() > j+1){
+                Collections.swap(rsEventDtoList, j, j+1);
+                j++;
+              }
+          }
+      }
+
+    List<RsEvent> rsEventSorted = rsEventDtoList.stream()
+          .map(rsEventDto ->
+                  RsEvent.builder()
+                          .eventName(rsEventDto.getEventName())
+                          .keyword(rsEventDto.getKeyword())
+                          .userId(rsEventDto.getUser().getId())
+                          .voteNum(rsEventDto.getVoteNum())
+                          .build()
+          )
+          .collect(Collectors.toList());
+    if (start == null || end == null) {
+      return ResponseEntity.ok(rsEventSorted);
+    }
+    return ResponseEntity.ok(rsEventSorted.subList(start - 1, end));
   }
 
   public void vote(Vote vote, int rsEventId) {

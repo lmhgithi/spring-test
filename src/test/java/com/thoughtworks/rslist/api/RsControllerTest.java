@@ -54,6 +54,33 @@ class RsControllerTest {
   }
 
   @Test
+  void shouldGetOrderedRsEvent() throws Exception {
+    UserDto save = userRepository.save(userDto);
+
+    RsEventDto rsEventDto1 = RsEventDto.builder().keyword("无").eventName("一").voteNum(32).user(save).build();
+    RsEventDto rsEventDto2 = RsEventDto.builder().keyword("无").eventName("二").voteNum(16).user(save).build();
+    RsEventDto rsEventDto3 = RsEventDto.builder().keyword("无").eventName("三").voteNum(8).user(save).build();
+    RsEventDto rsEventDto4 = RsEventDto.builder().keyword("无").eventName("四").voteNum(4).tradeRank(4).user(save).build();
+    RsEventDto rsEventDto5 = RsEventDto.builder().keyword("无").eventName("五").voteNum(2).tradeRank(1).user(save).build();
+    RsEventDto rsEventDto6 = RsEventDto.builder().keyword("无").eventName("六").voteNum(1).tradeRank(2).user(save).build();
+    rsEventRepository.save(rsEventDto1);
+    rsEventRepository.save(rsEventDto2);
+    rsEventRepository.save(rsEventDto3);
+    rsEventRepository.save(rsEventDto4);
+    rsEventRepository.save(rsEventDto5);
+    rsEventRepository.save(rsEventDto6);
+
+    mockMvc.perform(get("/rs/list"))
+            .andExpect(jsonPath("$[0].eventName", is("五")))
+            .andExpect(jsonPath("$[1].eventName", is("六")))
+            .andExpect(jsonPath("$[2].eventName", is("一")))
+            .andExpect(jsonPath("$[3].eventName", is("四")))
+            .andExpect(jsonPath("$[4].eventName", is("二")))
+            .andExpect(jsonPath("$[5].eventName", is("三")))
+            .andExpect(status().isOk());
+  }
+
+  @Test
   public void shouldGetRsEventList() throws Exception {
     UserDto save = userRepository.save(userDto);
 

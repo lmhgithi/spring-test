@@ -18,7 +18,5 @@ public class RsEvent implements Serializable {
   private int voteNum;
   @Builder.Default
   private int tradeRank = Integer.MAX_VALUE;
-  @Builder.Default
-  private int rank = Integer.MAX_VALUE;
   @NotNull private int userId;
 }
