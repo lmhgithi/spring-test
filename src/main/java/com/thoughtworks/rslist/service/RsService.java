@@ -12,6 +12,7 @@ import com.thoughtworks.rslist.repository.UserRepository;
 import com.thoughtworks.rslist.repository.VoteRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -53,6 +54,7 @@ public class RsService {
     rsEventRepository.save(rsEvent);
   }
 
+  @Transactional
   public ResponseEntity buy(Trade trade, int id) {
     Optional<TradeDto> tradeDto = tradeRepository.findByRank(trade.getRank());
     if(tradeDto.isPresent() && tradeDto.get().getAmount() > trade.getAmount()){
@@ -60,6 +62,13 @@ public class RsService {
     }else{
       TradeDto tradeDtoToSave = TradeDto.builder().amount(trade.getAmount())
               .rank(trade.getRank()).build();
+      tradeDto.ifPresent(dto -> rsEventRepository.deleteByTradeRank(dto.getRank()));
+
+      Optional<RsEventDto> rsEventDtoTraded = rsEventRepository.findById(id);
+      if(rsEventDtoTraded.isPresent()) {
+        rsEventDtoTraded.get().setTradeRank(trade.getRank());
+        rsEventRepository.save(rsEventDtoTraded.get());
+      }
       tradeRepository.save(tradeDtoToSave);
       return ResponseEntity.ok().build();
     }

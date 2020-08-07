@@ -16,5 +16,9 @@ public class RsEvent implements Serializable {
   @NotNull private String eventName;
   @NotNull private String keyword;
   private int voteNum;
+  @Builder.Default
+  private int tradeRank = Integer.MAX_VALUE;
+  @Builder.Default
+  private int rank = Integer.MAX_VALUE;
   @NotNull private int userId;
 }
