@@ -106,4 +106,16 @@ class RsServiceTest {
     // then
     verify(tradeRepository).save(tradeDto);
   }
+
+  @Test
+  void shouldAddTradeWhenRankIsTradedAndAmountIsEnough(){
+    Trade tradeToBuy = Trade.builder().amount(15).rank(1).build();
+    TradeDto tradeDtoToBuy = TradeDto.builder().amount(15).rank(1).build();
+    TradeDto tradeDtoExists = TradeDto.builder().amount(10).rank(1).build();
+    when(tradeRepository.findByRank(tradeToBuy.getRank())).thenReturn(Optional.ofNullable(tradeDtoExists));
+
+    rsService.buy(tradeToBuy, anyInt());
+
+    verify(tradeRepository).save(tradeDtoToBuy);
+  }
 }

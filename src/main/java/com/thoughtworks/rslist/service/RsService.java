@@ -54,13 +54,14 @@ public class RsService {
   }
 
   public ResponseEntity buy(Trade trade, int id) {
-    if(!tradeRepository.findByRank(trade.getRank()).isPresent()){
-        TradeDto tradeDto = TradeDto.builder().amount(trade.getAmount())
-                .rank(trade.getRank()).build();
-      tradeRepository.save(tradeDto);
-        return ResponseEntity.ok().build();
+    Optional<TradeDto> tradeDto = tradeRepository.findByRank(trade.getRank());
+    if(tradeDto.isPresent() && tradeDto.get().getAmount() > trade.getAmount()){
+      return ResponseEntity.badRequest().build();
     }else{
-        return ResponseEntity.badRequest().build();
+      TradeDto tradeDtoToSave = TradeDto.builder().amount(trade.getAmount())
+              .rank(trade.getRank()).build();
+      tradeRepository.save(tradeDtoToSave);
+      return ResponseEntity.ok().build();
     }
   }
 }
